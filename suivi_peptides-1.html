@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi Protocole Peptides</title>
+    <style>
+        :root {
+            --bg: #0f1419;
+            --card: #1a2332;
+            --border: #2d3a4f;
+            --text: #e7ecf3;
+            --muted: #8b9bb4;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --input-bg: #0f172a;
+            --radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3a5f, #0f172a);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+        header p { color: var(--muted); font-size: 0.95rem; }
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--muted);
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab:hover { border-color: var(--accent); color: var(--text); }
+        .tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+        label { font-size: 0.9rem; color: var(--muted); margin-right: 6px; }
+        select, input, textarea {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--border); color: var(--text); }
+        .btn-secondary:hover { background: #3d4f6a; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: #15202b;
+            color: var(--muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(59,130,246,0.05); }
+        .day-header {
+            background: #15202b !important;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .entry-row td { vertical-align: top; }
+        .peptide-select { min-width: 140px; }
+        .num-input { width: 90px; }
+        .ressenti-input { width: 100%; min-width: 120px; resize: vertical; min-height: 36px; }
+        .empty-day { color: var(--muted); font-style: italic; font-size: 0.9rem; }
+        .actions { display: flex; gap: 6px; }
+        .actions button { padding: 4px 10px; font-size: 0.8rem; }
+
+        /* Syringe visual */
+        .syringe-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 130px;
+        }
+        .units-badge {
+            background: var(--accent);
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+            min-width: 42px;
+            text-align: center;
+        }
+        .units-badge.empty { background: var(--border); color: var(--muted); }
+        .syringe {
+            position: relative;
+            width: 22px;
+            height: 70px;
+            background: #e2e8f0;
+            border: 2px solid #94a3b8;
+            border-radius: 4px 4px 8px 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .syringe::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 8px;
+            background: #94a3b8;
+            border-radius: 2px 2px 0 0;
+        }
+        .syringe-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, #60a5fa, #3b82f6);
+            transition: height 0.3s ease;
+            border-radius: 0 0 6px 6px;
+        }
+        .syringe-marks {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .syringe-marks span {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(0,0,0,0.15);
+        }
+        .syringe-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            line-height: 1.2;
+        }
+        .calc-info {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+        .calc-info strong { color: var(--success); }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .card h3 { margin-bottom: 12px; color: var(--accent); }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .stat-box {
+            background: var(--input-bg);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .stat-box .value { font-size: 1.5rem; font-weight: 700; color: var(--success); }
+        .stat-box .label { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+        .peptide-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .peptide-tag {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .peptide-tag button {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .add-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .add-form .full { grid-column: 1 / -1; }
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { background: var(--danger); }
+        .year-summary table { font-size: 0.9rem; }
+        .month-nav { display: flex; gap: 8px; align-items: center; }
+        .no-data { text-align: center; padding: 40px; color: var(--muted); }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        @media (max-width: 768px) {
+            table { font-size: 0.85rem; }
+            th, td { padding: 8px 6px; }
+            .num-input { width: 70px; }
+            .peptide-select { min-width: 110px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💉 Suivi Protocole Peptides</h1>
+            <p>Journal mensuel & suivi annuel — Données sauvegardées localement</p>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="mensuel">📅 Vue Mensuelle</div>
+            <div class="tab" data-tab="annuel">📊 Vue Annuelle</div>
+            <div class="tab" data-tab="peptides">🧬 Peptides</div>
+            <div class="tab" data-tab="export">💾 Export / Import</div>
+        </div>
+
+        <!-- PANEL MENSUEL -->
+        <div id="mensuel" class="panel active">
+            <div class="controls">
+                <div class="month-nav">
+                    <label>Année</label>
+                    <select id="yearSelect"></select>
+                    <label>Mois</label>
+                    <select id="monthSelect">
+                        <option value="0">Janvier</option>
+                        <option value="1">Février</option>
+                        <option value="2">Mars</option>
+                        <option value="3">Avril</option>
+                        <option value="4">Mai</option>
+                        <option value="5">Juin</option>
+                        <option value="6">Juillet</option>
+                        <option value="7">Août</option>
+                        <option value="8">Septembre</option>
+                        <option value="9">Octobre</option>
+                        <option value="10">Novembre</option>
+                        <option value="11">Décembre</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="showAddForm()">+ Ajouter une entrée</button>
+                <button class="btn btn-secondary" onclick="goToday()">Aujourd'hui</button>
+            </div>
+
+            <div id="addFormContainer" style="display:none;" class="card">
+                <h3>Nouvelle entrée</h3>
+                <div class="add-form">
+                    <div>
+                        <label>Date</label>
+                        <input type="date" id="entryDate">
+                    </div>
+                    <div>
+                        <label>Peptide</label>
+                        <select id="entryPeptide" class="peptide-select"></select>
+                    </div>
+                    <div id="grammageBox">
+                        <label>Grammage vial (mg)</label>
+                        <input type="number" id="entryGrammage" class="num-input" step="0.1" min="0" placeholder="ex: 5" oninput="updateUnitsPreview()">
+                    </div>
+                    <div id="mlBox">
+                        <label>ML reconstitution</label>
+                        <input type="number" id="entryMl" class="num-input" step="0.1" min="0" placeholder="ex: 2" oninput="updateUnitsPreview()">
+                    </div>
+                    <div>
+                        <label id="dosageLabel">Dosage (mg)</label>
+                        <input type="number" id="entryDosage" class="num-input" step="0.001" min="0" placeholder="ex: 0.25" oninput="updateUnitsPreview()">
+                    </div>
+                    <div>
+                        <label>Unités (seringue 1 ml U-100)</label>
+                        <div class="syringe-wrap" id="previewSyringe">
+                            <span class="units-badge empty" id="previewUnits">—</span>
+                            <div class="syringe">
+                                <div class="syringe-fill" id="previewFill" style="height:0%"></div>
+                                <div class="syringe-marks">
+                                    <span style="bottom:25%"></span>
+                                    <span style="bottom:50%"></span>
+                                    <span style="bottom:75%"></span>
+                                </div>
+                            </div>
+                            <div class="syringe-label" id="previewLabel">Remplis les champs<br>pour calculer</div>
+                        </div>
+                        <div class="calc-info" id="previewCalc"></div>
+                    </div>
+                    <div class="full">
+                        <label>Ressenti / Notes</label>
+                        <textarea id="entryRessenti" class="ressenti-input" rows="2" placeholder="Effets ressentis, site d'injection, etc."></textarea>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-success" onclick="addEntry()">Enregistrer</button>
+                    <button class="btn btn-secondary" onclick="hideAddForm()">Annuler</button>
+                </div>
+            </div>
+
+            <div id="monthlyTable"></div>
+        </div>
+
+        <!-- PANEL ANNUEL -->
+        <div id="annuel" class="panel">
+            <div class="controls">
+                <label>Année</label>
+                <select id="yearSelectAnnual"></select>
+            </div>
+            <div id="yearlyContent"></div>
+        </div>
+
+        <!-- PANEL PEPTIDES -->
+        <div id="peptides" class="panel">
+            <div class="card">
+                <h3>Liste des peptides disponibles</h3>
+                <p style="color:var(--muted);margin-bottom:12px;">Ces peptides apparaissent dans les menus déroulants. Vous pouvez en ajouter ou supprimer.</p>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+                    <input type="text" id="newPeptideName" placeholder="Nom du peptide" style="flex:1;min-width:160px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text);">
+                        <input type="checkbox" id="newPeptideIsLiquid"> Liquide prêt à l'emploi
+                    </label>
+                    <button class="btn btn-primary" onclick="addPeptide()">Ajouter</button>
+                </div>
+                <div class="peptide-list" id="peptideList"></div>
+            </div>
+            <div class="card">
+                <h3>Peptides par défaut (réinitialiser)</h3>
+                <p style="color:var(--muted);margin-bottom:12px;">Remet la liste standard des peptides + liquides (Lipo C, LC526, LC 226).</p>
+                <button class="btn btn-secondary" onclick="resetPeptides()">Réinitialiser la liste</button>
+            </div>
+        </div>
+
+        <!-- PANEL EXPORT -->
+        <div id="export" class="panel">
+            <div class="card">
+                <h3>Exporter les données</h3>
+                <p style="color:var(--muted);margin-bottom:12px;">Téléchargez un fichier JSON de toutes vos entrées et peptides.</p>
+                <button class="btn btn-primary" onclick="exportData()">Télécharger JSON</button>
+            </div>
+            <div class="card">
+                <h3>Importer des données</h3>
+                <p style="color:var(--muted);margin-bottom:12px;">Chargez un fichier JSON précédemment exporté (remplace les données actuelles).</p>
+                <input type="file" id="importFile" accept=".json" style="margin-bottom:12px;">
+                <button class="btn btn-success" onclick="importData()">Importer</button>
+            </div>
+            <div class="card">
+                <h3>Effacer toutes les données</h3>
+                <p style="color:var(--muted);margin-bottom:12px;">Attention : action irréversible.</p>
+                <button class="btn btn-danger" onclick="clearAllData()">Tout effacer</button>
+            </div>
+        </div>
+
+        <footer>
+            Suivi Peptides • Données stockées uniquement dans votre navigateur (localStorage)
+        </footer>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // ===== DEFAULT PEPTIDES =====
+        const DEFAULT_PEPTIDES = [
+            "BPC-157", "TB-500", "CJC-1295 (no DAC)", "CJC-1295 (DAC)",
+            "Ipamorelin", "Sermorelin", "Tesamorelin", "IGF-1 LR3",
+            "GHRP-2", "GHRP-6", "Hexarelin", "AOD-9604",
+            "Semaglutide", "Tirzepatide", "Retatrutide",
+            "Melanotan II", "PT-141", "Epitalon", "Thymosin Alpha-1",
+            "GHK-Cu", "MOTS-c", "KPV", "Autre"
+        ];
+
+        // Peptides liquides prêts à l'emploi (dosage directement en ml)
+        const DEFAULT_LIQUID_PEPTIDES = [
+            "Lipo C", "LC526", "LC 226"
+        ];
+
+        // ===== STATE =====
+        let peptides = [];
+        let liquidPeptides = [];
+        let entries = []; // {id, date, peptide, grammage, ml, dosage, ressenti, isLiquid}
+
+        // ===== INIT =====
+        function init() {
+            loadData();
+            setupYears();
+            setupTabs();
+            const now = new Date();
+            document.getElementById('monthSelect').value = now.getMonth();
+            document.getElementById('yearSelect').value = now.getFullYear();
+            document.getElementById('yearSelectAnnual').value = now.getFullYear();
+            renderPeptideSelects();
+            renderPeptideList();
+            renderMonthly();
+            renderYearly();
+        }
+
+        function setupYears() {
+            const yearSelect = document.getElementById('yearSelect');
+            const yearSelectAnnual = document.getElementById('yearSelectAnnual');
+            const currentYear = new Date().getFullYear();
+            for (let y = currentYear - 3; y <= currentYear + 2; y++) {
+                yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+                yearSelectAnnual.innerHTML += `<option value="${y}">${y}</option>`;
+            }
+            yearSelect.addEventListener('change', renderMonthly);
+            document.getElementById('monthSelect').addEventListener('change', renderMonthly);
+            yearSelectAnnual.addEventListener('change', renderYearly);
+        }
+
+        function setupTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                    if (tab.dataset.tab === 'annuel') renderYearly();
+                    if (tab.dataset.tab === 'mensuel') renderMonthly();
+                });
+            });
+        }
+
+        // ===== STORAGE =====
+        function loadData() {
+            try {
+                const p = localStorage.getItem('peptide_list');
+                peptides = p ? JSON.parse(p) : [...DEFAULT_PEPTIDES];
+                const lp = localStorage.getItem('liquid_peptide_list');
+                liquidPeptides = lp ? JSON.parse(lp) : [...DEFAULT_LIQUID_PEPTIDES];
+                // Ensure defaults exist even if user has old data
+                DEFAULT_LIQUID_PEPTIDES.forEach(name => {
+                    if (!liquidPeptides.includes(name)) liquidPeptides.push(name);
+                });
+                const e = localStorage.getItem('peptide_entries');
+                entries = e ? JSON.parse(e) : [];
+            } catch (err) {
+                peptides = [...DEFAULT_PEPTIDES];
+                liquidPeptides = [...DEFAULT_LIQUID_PEPTIDES];
+                entries = [];
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('peptide_list', JSON.stringify(peptides));
+            localStorage.setItem('liquid_peptide_list', JSON.stringify(liquidPeptides));
+            localStorage.setItem('peptide_entries', JSON.stringify(entries));
+        }
+
+        function isLiquidPeptide(name) {
+            return liquidPeptides.includes(name);
+        }
+
+        // ===== PEPTIDES MANAGEMENT =====
+        function renderPeptideSelects() {
+            const selects = document.querySelectorAll('.peptide-select, #entryPeptide');
+            selects.forEach(sel => {
+                const current = sel.value;
+                let html = '<option value="">— Choisir —</option>';
+                html += '<optgroup label="🔬 Peptides (reconstitution)">';
+                peptides.forEach(p => {
+                    html += `<option value="${p}">${p}</option>`;
+                });
+                html += '</optgroup>';
+                html += '<optgroup label="💧 Liquides prêts à l\'emploi">';
+                liquidPeptides.forEach(p => {
+                    html += `<option value="${p}">${p}</option>`;
+                });
+                html += '</optgroup>';
+                sel.innerHTML = html;
+                if (current) sel.value = current;
+            });
+            // Attach change listener for form mode switch
+            const entrySel = document.getElementById('entryPeptide');
+            if (entrySel && !entrySel._liquidListener) {
+                entrySel.addEventListener('change', onPeptideChange);
+                entrySel._liquidListener = true;
+            }
+        }
+
+        function renderPeptideList() {
+            const list = document.getElementById('peptideList');
+            let html = '<div style="width:100%;margin-bottom:8px;"><strong style="color:var(--muted);font-size:0.85rem;">Peptides (reconstitution)</strong></div>';
+            html += peptides.map(p => `
+                <div class="peptide-tag">
+                    ${p}
+                    <button onclick="removePeptide('${p.replace(/'/g, "\\'")}')" title="Supprimer">×</button>
+                </div>
+            `).join('');
+            html += '<div style="width:100%;margin:12px 0 8px;"><strong style="color:var(--muted);font-size:0.85rem;">💧 Liquides prêts à l\'emploi</strong></div>';
+            html += liquidPeptides.map(p => `
+                <div class="peptide-tag" style="border-color:var(--success);">
+                    ${p}
+                    <button onclick="removeLiquidPeptide('${p.replace(/'/g, "\\'")}')" title="Supprimer">×</button>
+                </div>
+            `).join('');
+            list.innerHTML = html;
+        }
+
+        function addPeptide() {
+            const input = document.getElementById('newPeptideName');
+            const name = input.value.trim();
+            const isLiquid = document.getElementById('newPeptideIsLiquid')?.checked;
+            if (!name) return showToast('Entrez un nom', true);
+            if (peptides.includes(name) || liquidPeptides.includes(name)) return showToast('Déjà présent', true);
+            if (isLiquid) {
+                liquidPeptides.push(name);
+                liquidPeptides.sort((a,b) => a.localeCompare(b));
+            } else {
+                peptides.push(name);
+                peptides.sort((a,b) => a.localeCompare(b));
+            }
+            saveData();
+            renderPeptideList();
+            renderPeptideSelects();
+            input.value = '';
+            if (document.getElementById('newPeptideIsLiquid')) document.getElementById('newPeptideIsLiquid').checked = false;
+            showToast(isLiquid ? 'Liquide ajouté' : 'Peptide ajouté');
+        }
+
+        function removePeptide(name) {
+            if (!confirm(`Supprimer "${name}" de la liste ?`)) return;
+            peptides = peptides.filter(p => p !== name);
+            saveData();
+            renderPeptideList();
+            renderPeptideSelects();
+            showToast('Peptide supprimé');
+        }
+
+        function removeLiquidPeptide(name) {
+            if (!confirm(`Supprimer "${name}" de la liste des liquides ?`)) return;
+            liquidPeptides = liquidPeptides.filter(p => p !== name);
+            saveData();
+            renderPeptideList();
+            renderPeptideSelects();
+            showToast('Liquide supprimé');
+        }
+
+        function resetPeptides() {
+            if (!confirm('Réinitialiser la liste des peptides ?')) return;
+            peptides = [...DEFAULT_PEPTIDES];
+            liquidPeptides = [...DEFAULT_LIQUID_PEPTIDES];
+            saveData();
+            renderPeptideList();
+            renderPeptideSelects();
+            showToast('Liste réinitialisée');
+        }
+
+        function onPeptideChange() {
+            toggleLiquidMode();
+            updateUnitsPreview();
+        }
+
+        function toggleLiquidMode() {
+            const peptide = document.getElementById('entryPeptide').value;
+            const isLiquid = isLiquidPeptide(peptide);
+            const grammageBox = document.getElementById('grammageBox');
+            const mlBox = document.getElementById('mlBox');
+            const dosageLabel = document.getElementById('dosageLabel');
+            const dosageInput = document.getElementById('entryDosage');
+
+            if (grammageBox) grammageBox.style.display = isLiquid ? 'none' : 'block';
+            if (mlBox) mlBox.style.display = isLiquid ? 'none' : 'block';
+            if (dosageLabel) {
+                dosageLabel.textContent = isLiquid ? 'Dosage (ml)' : 'Dosage (mg)';
+            }
+            if (dosageInput) {
+                dosageInput.placeholder = isLiquid ? 'ex: 0.5' : 'ex: 0.25';
+                dosageInput.step = isLiquid ? '0.01' : '0.001';
+            }
+        }
+
+        // ===== CALCUL UNITÉS (seringue 1 ml U-100) =====
+        // Mode reconstitution:
+        //   Concentration (mg/ml) = grammage / ml_reconstitution
+        //   Volume (ml) = dosage_mg / concentration
+        //   Unités = volume_ml * 100
+        // Mode liquide (prêt à l'emploi):
+        //   dosage est déjà en ml → Unités = dosage_ml * 100
+        function calcUnits(grammage, ml, dosage, isLiquid = false) {
+            if (!dosage || dosage <= 0) return null;
+            if (isLiquid) {
+                const volumeMl = dosage;
+                const units = volumeMl * 100;
+                return {
+                    units: Math.round(units * 10) / 10,
+                    volumeMl: Math.round(volumeMl * 1000) / 1000,
+                    concentration: null,
+                    pct: Math.min(100, Math.max(0, units)),
+                    isLiquid: true
+                };
+            }
+            if (!grammage || !ml || ml <= 0 || grammage <= 0) return null;
+            const concentration = grammage / ml;
+            const volumeMl = dosage / concentration;
+            const units = volumeMl * 100;
+            return {
+                units: Math.round(units * 10) / 10,
+                volumeMl: Math.round(volumeMl * 1000) / 1000,
+                concentration: Math.round(concentration * 1000) / 1000,
+                pct: Math.min(100, Math.max(0, units)),
+                isLiquid: false
+            };
+        }
+
+        function updateUnitsPreview() {
+            const peptide = document.getElementById('entryPeptide').value;
+            const isLiquid = isLiquidPeptide(peptide);
+            const g = parseFloat(document.getElementById('entryGrammage').value);
+            const m = parseFloat(document.getElementById('entryMl').value);
+            const d = parseFloat(document.getElementById('entryDosage').value);
+            const result = calcUnits(g, m, d, isLiquid);
+            const badge = document.getElementById('previewUnits');
+            const fill = document.getElementById('previewFill');
+            const label = document.getElementById('previewLabel');
+            const calcInfo = document.getElementById('previewCalc');
+
+            if (!result) {
+                badge.textContent = '—';
+                badge.className = 'units-badge empty';
+                fill.style.height = '0%';
+                label.innerHTML = isLiquid ? 'Indique le dosage<br>en ml' : 'Remplis les champs<br>pour calculer';
+                calcInfo.innerHTML = isLiquid ? '<em>Produit déjà prêt à l\'emploi</em>' : '';
+                return;
+            }
+            badge.textContent = result.units + ' U';
+            badge.className = 'units-badge';
+            fill.style.height = result.pct + '%';
+            label.innerHTML = result.units + ' unités<br>sur 100';
+            if (result.isLiquid) {
+                calcInfo.innerHTML = `Liquide prêt → <strong>${result.volumeMl} ml</strong> directement`;
+            } else {
+                calcInfo.innerHTML = `Conc. <strong>${result.concentration} mg/ml</strong> → ${result.volumeMl} ml`;
+            }
+        }
+
+        function syringeHTML(grammage, ml, dosage, peptideName) {
+            const isLiquid = isLiquidPeptide(peptideName);
+            const result = calcUnits(grammage, ml, dosage, isLiquid);
+            if (!result) {
+                return `<div class="syringe-wrap">
+                    <span class="units-badge empty">—</span>
+                    <div class="syringe"><div class="syringe-fill" style="height:0%"></div>
+                    <div class="syringe-marks"><span style="bottom:25%"></span><span style="bottom:50%"></span><span style="bottom:75%"></span></div></div>
+                </div>`;
+            }
+            return `<div class="syringe-wrap">
+                <span class="units-badge">${result.units} U</span>
+                <div class="syringe">
+                    <div class="syringe-fill" style="height:${result.pct}%"></div>
+                    <div class="syringe-marks">
+                        <span style="bottom:25%"></span>
+                        <span style="bottom:50%"></span>
+                        <span style="bottom:75%"></span>
+                    </div>
+                </div>
+                <div class="syringe-label">${result.volumeMl} ml${result.isLiquid ? ' <small>(liquide)</small>' : ''}</div>
+            </div>`;
+        }
+
+        // ===== ENTRIES =====
+        function showAddForm() {
+            document.getElementById('addFormContainer').style.display = 'block';
+            const now = new Date();
+            const y = document.getElementById('yearSelect').value;
+            const m = parseInt(document.getElementById('monthSelect').value) + 1;
+            document.getElementById('entryDate').value = `${y}-${String(m).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+            renderPeptideSelects();
+            toggleLiquidMode();
+            updateUnitsPreview();
+        }
+
+        function hideAddForm() {
+            document.getElementById('addFormContainer').style.display = 'none';
+            clearAddForm();
+            // Reset update button
+            const btn = document.querySelector('#addFormContainer .btn-success');
+            btn.textContent = 'Enregistrer';
+            btn.onclick = addEntry;
+        }
+
+        function clearAddForm() {
+            document.getElementById('entryPeptide').value = '';
+            document.getElementById('entryGrammage').value = '';
+            document.getElementById('entryMl').value = '';
+            document.getElementById('entryDosage').value = '';
+            document.getElementById('entryRessenti').value = '';
+            updateUnitsPreview();
+        }
+
+        function addEntry() {
+            const date = document.getElementById('entryDate').value;
+            const peptide = document.getElementById('entryPeptide').value;
+            const isLiquid = isLiquidPeptide(peptide);
+            const grammage = document.getElementById('entryGrammage').value;
+            const ml = document.getElementById('entryMl').value;
+            const dosage = document.getElementById('entryDosage').value;
+            const ressenti = document.getElementById('entryRessenti').value.trim();
+
+            if (!date || !peptide) {
+                showToast('Date et peptide obligatoires', true);
+                return;
+            }
+            if (!dosage) {
+                showToast(isLiquid ? 'Dosage (ml) obligatoire' : 'Dosage (mg) obligatoire', true);
+                return;
+            }
+
+            entries.push({
+                id: Date.now() + Math.random().toString(36).slice(2),
+                date,
+                peptide,
+                grammage: isLiquid ? null : (grammage ? parseFloat(grammage) : null),
+                ml: isLiquid ? null : (ml ? parseFloat(ml) : null),
+                dosage: dosage ? parseFloat(dosage) : null,
+                ressenti,
+                isLiquid
+            });
+
+            saveData();
+            hideAddForm();
+            renderMonthly();
+            renderYearly();
+            showToast('Entrée enregistrée');
+        }
+
+        function deleteEntry(id) {
+            if (!confirm('Supprimer cette entrée ?')) return;
+            entries = entries.filter(e => e.id !== id);
+            saveData();
+            renderMonthly();
+            renderYearly();
+            showToast('Entrée supprimée');
+        }
+
+        function editEntry(id) {
+            const e = entries.find(x => x.id === id);
+            if (!e) return;
+            showAddForm();
+            document.getElementById('entryDate').value = e.date;
+            document.getElementById('entryPeptide').value = e.peptide;
+            document.getElementById('entryGrammage').value = e.grammage ?? '';
+            document.getElementById('entryMl').value = e.ml ?? '';
+            document.getElementById('entryDosage').value = e.dosage ?? '';
+            document.getElementById('entryRessenti').value = e.ressenti || '';
+            toggleLiquidMode();
+            updateUnitsPreview();
+            // Replace add with update
+            const btn = document.querySelector('#addFormContainer .btn-success');
+            btn.textContent = 'Mettre à jour';
+            btn.onclick = () => {
+                const peptide = document.getElementById('entryPeptide').value;
+                const isLiquid = isLiquidPeptide(peptide);
+                e.date = document.getElementById('entryDate').value;
+                e.peptide = peptide;
+                e.grammage = isLiquid ? null : (document.getElementById('entryGrammage').value ? parseFloat(document.getElementById('entryGrammage').value) : null);
+                e.ml = isLiquid ? null : (document.getElementById('entryMl').value ? parseFloat(document.getElementById('entryMl').value) : null);
+                e.dosage = document.getElementById('entryDosage').value ? parseFloat(document.getElementById('entryDosage').value) : null;
+                e.ressenti = document.getElementById('entryRessenti').value.trim();
+                e.isLiquid = isLiquid;
+                saveData();
+                hideAddForm();
+                renderMonthly();
+                renderYearly();
+                showToast('Entrée mise à jour');
+            };
+        }
+
+        // ===== RENDER MONTHLY =====
+        function renderMonthly() {
+            const year = parseInt(document.getElementById('yearSelect').value);
+            const month = parseInt(document.getElementById('monthSelect').value);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const monthEntries = entries.filter(e => {
+                const d = new Date(e.date + 'T00:00:00');
+                return d.getFullYear() === year && d.getMonth() === month;
+            }).sort((a,b) => a.date.localeCompare(b.date) || a.peptide.localeCompare(b.peptide));
+
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>Jour</th>
+                        <th>Peptide</th>
+                        <th>Grammage vial (mg)</th>
+                        <th>ML recon.</th>
+                        <th>Dosage (mg)</th>
+                        <th>Unités + Seringue<br><small style="font-weight:400;text-transform:none">(1 ml U-100)</small></th>
+                        <th>Ressenti</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const dayEntries = monthEntries.filter(e => e.date === dateStr);
+                const dayName = new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short' });
+
+                if (dayEntries.length === 0) {
+                    html += `<tr>
+                        <td class="day-header">${day} ${dayName}</td>
+                        <td colspan="7" class="empty-day">Aucune entrée</td>
+                    </tr>`;
+                } else {
+                    dayEntries.forEach((e, idx) => {
+                        const liquid = isLiquidPeptide(e.peptide);
+                        html += `<tr class="entry-row">
+                            <td class="day-header">${idx === 0 ? `${day} ${dayName}` : ''}</td>
+                            <td><strong>${e.peptide}</strong>${liquid ? ' <small style="color:var(--success)">💧</small>' : ''}</td>
+                            <td>${liquid ? '—' : (e.grammage != null ? e.grammage : '—')}</td>
+                            <td>${liquid ? '—' : (e.ml != null ? e.ml : '—')}</td>
+                            <td>${e.dosage != null ? e.dosage + (liquid ? ' ml' : ' mg') : '—'}</td>
+                            <td>${syringeHTML(e.grammage, e.ml, e.dosage, e.peptide)}</td>
+                            <td>${e.ressenti || '—'}</td>
+                            <td class="actions">
+                                <button class="btn btn-secondary" onclick="editEntry('${e.id}')">✎</button>
+                                <button class="btn btn-danger" onclick="deleteEntry('${e.id}')">×</button>
+                            </td>
+                        </tr>`;
+                    });
+                }
+            }
+
+            html += '</tbody></table>';
+
+            // Summary for the month
+            const totalDoses = monthEntries.length;
+            const byPeptide = {};
+            monthEntries.forEach(e => {
+                if (!byPeptide[e.peptide]) byPeptide[e.peptide] = { count: 0, totalMg: 0 };
+                byPeptide[e.peptide].count++;
+                if (e.dosage) byPeptide[e.peptide].totalMg += e.dosage;
+            });
+
+            html += `<div class="card"><h3>Résumé du mois</h3>
+                <p style="margin-bottom:12px;">${totalDoses} entrée(s) enregistrée(s)</p>
+                <div class="stats-grid">`;
+            Object.entries(byPeptide).forEach(([p, s]) => {
+                html += `<div class="stat-box">
+                    <div class="value">${s.count}</div>
+                    <div class="label">${p}</div>
+                    <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">${s.totalMg.toFixed(3)} mg total</div>
+                </div>`;
+            });
+            html += '</div></div>';
+
+            document.getElementById('monthlyTable').innerHTML = html;
+        }
+
+        function goToday() {
+            const now = new Date();
+            document.getElementById('yearSelect').value = now.getFullYear();
+            document.getElementById('monthSelect').value = now.getMonth();
+            renderMonthly();
+        }
+
+        // ===== RENDER YEARLY =====
+        function renderYearly() {
+            const year = parseInt(document.getElementById('yearSelectAnnual').value);
+            const yearEntries = entries.filter(e => new Date(e.date + 'T00:00:00').getFullYear() === year);
+
+            if (yearEntries.length === 0) {
+                document.getElementById('yearlyContent').innerHTML = '<div class="no-data">Aucune donnée pour cette année</div>';
+                return;
+            }
+
+            // By peptide
+            const byPeptide = {};
+            yearEntries.forEach(e => {
+                if (!byPeptide[e.peptide]) byPeptide[e.peptide] = { count: 0, totalMg: 0, months: new Set() };
+                byPeptide[e.peptide].count++;
+                if (e.dosage) byPeptide[e.peptide].totalMg += e.dosage;
+                byPeptide[e.peptide].months.add(new Date(e.date + 'T00:00:00').getMonth());
+            });
+
+            // By month
+            const byMonth = Array(12).fill(0).map(() => ({ count: 0, totalMg: 0 }));
+            yearEntries.forEach(e => {
+                const m = new Date(e.date + 'T00:00:00').getMonth();
+                byMonth[m].count++;
+                if (e.dosage) byMonth[m].totalMg += e.dosage;
+            });
+
+            const monthsFr = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+
+            let html = `<div class="card">
+                <h3>Vue d'ensemble ${year}</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="value">${yearEntries.length}</div>
+                        <div class="label">Entrées totales</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value">${Object.keys(byPeptide).length}</div>
+                        <div class="label">Peptides différents</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="value">${Object.values(byPeptide).reduce((a,b)=>a+b.totalMg,0).toFixed(2)}</div>
+                        <div class="label">mg administrés (total)</div>
+                    </div>
+                </div>
+            </div>`;
+
+            html += `<div class="card"><h3>Par peptide</h3>
+                <table>
+                    <thead><tr><th>Peptide</th><th>Nb injections</th><th>Total mg</th><th>Mois utilisés</th></tr></thead>
+                    <tbody>`;
+            Object.entries(byPeptide).sort((a,b)=>b[1].count - a[1].count).forEach(([p,s]) => {
+                const mois = [...s.months].sort((a,b)=>a-b).map(m => monthsFr[m]).join(', ');
+                html += `<tr>
+                    <td><strong>${p}</strong></td>
+                    <td>${s.count}</td>
+                    <td>${s.totalMg.toFixed(3)}</td>
+                    <td>${mois}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            html += `<div class="card"><h3>Par mois</h3>
+                <table>
+                    <thead><tr><th>Mois</th><th>Nb entrées</th><th>Total mg</th></tr></thead>
+                    <tbody>`;
+            byMonth.forEach((s, i) => {
+                if (s.count > 0) {
+                    html += `<tr>
+                        <td>${monthsFr[i]}</td>
+                        <td>${s.count}</td>
+                        <td>${s.totalMg.toFixed(3)}</td>
+                    </tr>`;
+                }
+            });
+            html += '</tbody></table></div>';
+
+            document.getElementById('yearlyContent').innerHTML = html;
+        }
+
+        // ===== EXPORT / IMPORT =====
+        function exportData() {
+            const data = { peptides, liquidPeptides, entries, exportedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `suivi_peptides_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Export téléchargé');
+        }
+
+        function importData() {
+            const file = document.getElementById('importFile').files[0];
+            if (!file) return showToast('Choisissez un fichier', true);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.peptides) peptides = data.peptides;
+                    if (data.liquidPeptides) liquidPeptides = data.liquidPeptides;
+                    if (data.entries) entries = data.entries;
+                    saveData();
+                    renderPeptideList();
+                    renderPeptideSelects();
+                    renderMonthly();
+                    renderYearly();
+                    showToast('Données importées');
+                } catch (err) {
+                    showToast('Fichier invalide', true);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if (!confirm('Vraiment tout effacer ? Cette action est irréversible.')) return;
+            if (!confirm('Dernière confirmation : toutes les entrées et peptides personnalisés seront perdus.')) return;
+            entries = [];
+            peptides = [...DEFAULT_PEPTIDES];
+            liquidPeptides = [...DEFAULT_LIQUID_PEPTIDES];
+            saveData();
+            renderPeptideList();
+            renderPeptideSelects();
+            renderMonthly();
+            renderYearly();
+            showToast('Toutes les données effacées');
+        }
+
+        // ===== TOAST =====
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
